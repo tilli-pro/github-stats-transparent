@@ -2,14 +2,14 @@
 > Generate visualizations of GitHub user and repository statistics using GitHub
 Actions.
 
-<a href="https://github.com/rahul-jha98/github-stats-transparent">
+<a href="https://github.com/tilli-pro/github-stats-transparent">
 
-![](https://raw.githubusercontent.com/rahul-jha98/github-stats-transparent/output/generated/overview.svg)
-![](https://raw.githubusercontent.com/rahul-jha98/github-stats-transparent/output/generated/languages.svg)
+![](https://raw.githubusercontent.com/tilli-pro/github-stats-transparent/output/generated/overview.svg)
+![](https://raw.githubusercontent.com/tilli-pro/github-stats-transparent/output/generated/languages.svg)
 
 </a>
 
-> NOTE: This repository is my extension of the repo [jstrieb/github-stats](https://github.com/jstrieb/github-stats). This repo was meant to serve as a detached fork of his project. If you like this repository make sure you also star his repository to show appreciation for his work. 
+> NOTE: This repository is our extension of the repo [rahul-jha98/github-stats](https://github.com/rahul-jha98/github-stats-transparent). If you like this repository make sure you also star his repository to show appreciation for his work.
 
 ## ⚠️ Disclaimer
 
@@ -76,21 +76,10 @@ anyone may be able to see the name of one or more private repositories.
 <br>
 <br>
 
-## 🤔 Why Transparent ??
-With the introduction of dark mode in Github it has become difficult to set an image background that looks consistent with the background in both dark and light mode. 
-
-To solve this the most obvious solution was to make the background transparent. All that was left was to choose colors for text that makes it legible in light as well as dark background.
-
-After wasting a day playing with different color values finally settled on one. Hope you like it. 
-
-![](https://raw.githubusercontent.com/rahul-jha98/github-stats-transparent/main/readme_images/light.png)
-
-![](https://raw.githubusercontent.com/rahul-jha98/github-stats-transparent/main/readme_images/dark.png)
-
-
 ## Related Projects
 
-- Extension of a detached fork of [jstrieb/github-stats](https://github.com/jstrieb/github-stats)
+- Extension of a detached fork of [rahul-jha98/github-stats](https://github.com/rahul-jha98/github-stats-transparent)
+   - Which is also an extension of a detached fork of [jstrieb/github-stats](https://github.com/jstrieb/github-stats)
 - Inspired by a desire to improve upon
   [anuraghazra/github-readme-stats](https://github.com/anuraghazra/github-readme-stats)
 - Makes use of [GitHub Octicons](https://primer.style/octicons/) to precisely
