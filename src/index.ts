@@ -1,6 +1,6 @@
-import util from "node:util";
 import terminalImage from "terminal-image";
 
+import spinner from "./spinner.js";
 import { getStats } from "./stats.js";
 
 const createTerminalImage = async (
@@ -20,6 +20,7 @@ const createTerminalImage = async (
 };
 
 async function main() {
+  spinner.start("Fetching stats...");
   const stats = await getStats();
 
   const orgImage = await createTerminalImage(stats.organization.avatar_url);
@@ -124,6 +125,8 @@ async function main() {
       );
     }
   }
+
+  spinner.succeed("Stats fetched successfully");
 }
 
 main()

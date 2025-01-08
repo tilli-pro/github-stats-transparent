@@ -1,4 +1,5 @@
 import { octokit } from "./octokit.js";
+import spinner from "./spinner.js";
 
 const settleStat = async <T extends PromiseSettledResult<any>>(
   promise: T,
@@ -26,8 +27,12 @@ export const getStats = async () => {
   const lastWeek = new Date(now - 7 * 24 * 60 * 60 * 1000);
 
   if (!process.env.ORG_NAME) {
+    spinner.fail("ORG_NAME is not defined");
     throw new Error("ORG_NAME is not defined");
   }
+
+  spinner.prefixText = "GitHub API";
+  spinner.text = "Fetching organization data...";
 
   const [
     { status, data: repoData, headers },
@@ -52,7 +57,7 @@ export const getStats = async () => {
 
   if (status > 204) {
     console.log(headers);
-    console.log("Failed to fetch repository data");
+    spinner.fail("Failed to fetch organization data");
   }
 
   type GithubStat = (typeof repoData)[number] & {
@@ -72,6 +77,7 @@ export const getStats = async () => {
   // TODO: see how much of this can be parallelized without running into rate limit issues
   for (const repo of repoData as GithubStat[]) {
     try {
+      spinner.text = `Fetching data for ${repo.name}`;
       const [langResult, contributerResult, commitResult] =
         await Promise.allSettled([
           octokit.repos.listLanguages({
@@ -119,6 +125,7 @@ export const getStats = async () => {
       }
 
       if (commitData) {
+        spinner.text = `Fetching detailed commit data for ${repo.name}`;
         const detailedCommitDataResult = await Promise.all(
           commitData.map((commit) =>
             octokit.repos.getCommit({
