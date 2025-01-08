@@ -6,6 +6,21 @@ const settleStat = async <T extends PromiseSettledResult<any>>(
   resource: string,
 ) => {};
 
+const ignoredFiles = [
+  "pnpm-lock.yaml",
+  "package-lock.json",
+  "yarn.lock",
+  "(.*).csproj",
+  "(.*).sln",
+  "(.*).dll",
+  "(.*).pbxproj",
+  "(.*).xcworkspace",
+  "(.*).xcodeproj",
+  "(.*).xcassets",
+  "(.*).xcconfig",
+  "(.*).xcuserdatad",
+] as const;
+
 export const getStats = async () => {
   const now = Date.now();
   const lastWeek = new Date(now - 7 * 24 * 60 * 60 * 1000);
@@ -48,7 +63,10 @@ export const getStats = async () => {
   const langSummary: Record<string, number> = {};
   const userSummary: Record<
     string,
-    { total: number; weekly_stats: Record<string, [number, number, number]> }
+    {
+      total: number;
+      weekly_stats: Record<string, [number, number, number]>;
+    } & Awaited<ReturnType<typeof octokit.orgs.listMembers>>["data"][number]
   > = {};
 
   // TODO: see how much of this can be parallelized without running into rate limit issues
@@ -118,16 +136,29 @@ export const getStats = async () => {
           if (!login) return;
 
           if (!userSummary[login]) {
-            userSummary[login] = { total: 0, weekly_stats: {} };
+            const user = orgUserData.find((u) => u.login === login)! ?? {};
+            userSummary[login] = { total: 0, weekly_stats: {}, ...user };
           }
           if (!userSummary[login].weekly_stats[repo.name]) {
             userSummary[login].weekly_stats[repo.name] = [0, 0, 0];
           }
+
+          const [lockFileAdditions, lockFileDeletions] = c.files
+            ?.filter((f) =>
+              ignoredFiles.some((name) => new RegExp(name).test(f.filename)),
+            )
+            .reduce(
+              ([additions, deletions], file) => {
+                return [additions + file.additions, deletions + file.deletions];
+              },
+              [0, 0],
+            ) ?? [0, 0];
+
           userSummary[login].weekly_stats[repo.name][0]++;
           userSummary[login].weekly_stats[repo.name][1] +=
-            c.stats?.additions ?? 0;
+            (c.stats?.additions ?? 0) - lockFileAdditions;
           userSummary[login].weekly_stats[repo.name][2] +=
-            c.stats?.deletions ?? 0;
+            (c.stats?.deletions ?? 0) - lockFileDeletions;
         });
       }
 
@@ -151,7 +182,9 @@ export const getStats = async () => {
             return;
           }
           if (!userSummary[username]) {
-            userSummary[username] = { total: 0, weekly_stats: {} };
+            const orgUser =
+              orgUserData.find((u) => u.login === username)! ?? {};
+            userSummary[username] = { total: 0, weekly_stats: {}, ...orgUser };
           }
           userSummary[username].total += user.contributions;
         });

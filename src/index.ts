@@ -3,47 +3,48 @@ import terminalImage from "terminal-image";
 
 import { getStats } from "./stats.js";
 
+const createTerminalImage = async (
+  url: string,
+  opts: {
+    width?: number | string;
+    height?: number | string;
+    preserveAspectRatio?: boolean;
+  } = {
+    height: "50%",
+    preserveAspectRatio: true,
+  },
+) => {
+  const imageRequest = await fetch(url);
+  const imageBuffer = await imageRequest.arrayBuffer();
+  return terminalImage.buffer(Buffer.from(imageBuffer), opts);
+};
+
 async function main() {
   const stats = await getStats();
 
-  const orgImageUrl = stats.organization.avatar_url;
-  const orgImageRequest = await fetch(orgImageUrl);
-  const orgImageBuffer = await orgImageRequest.arrayBuffer();
-  const orgImage = await terminalImage.buffer(Buffer.from(orgImageBuffer), {
-    height: "20%",
-    preserveAspectRatio: true,
-  });
+  const orgImage = await createTerminalImage(stats.organization.avatar_url);
 
   if (process.env.NODE_ENV !== "production") {
     process.stdout.write("\u001b[2J\u001b[0;0H");
     console.log(orgImage);
     console.log(
-      `Organization: ${stats.organization.name} (${stats.organization.login})`,
+      `Organization: ${stats.organization.name} (${stats.organization.login})\n\n`,
     );
   }
 
   const contributors = Object.entries(stats.contributors);
   contributors.sort(
-    (
-      [userA, { total: totalA, weekly_stats: _reposA }],
-      [userB, { total: totalB, weekly_stats: _reposB }],
-    ) => {
+    ([, { weekly_stats: _reposA }], [, { weekly_stats: _reposB }]) => {
       const [reposA, reposB] = [
         Object.entries(_reposA),
         Object.entries(_reposB),
       ];
       const commitAggregateA = reposA.reduce(
-        (acc, [repo, stats]) => [
-          stats[0] + acc[0],
-          stats[1] - stats[2] + acc[1],
-        ],
+        (acc, [, stats]) => [stats[0] + acc[0], stats[1] - stats[2] + acc[1]],
         [0, 0],
       );
       const commitAggregateB = reposB.reduce(
-        (acc, [repo, stats]) => [
-          stats[0] + acc[0],
-          stats[1] - stats[2] + acc[1],
-        ],
+        (acc, [, stats]) => [stats[0] + acc[0], stats[1] - stats[2] + acc[1]],
         [0, 0],
       );
 
@@ -55,7 +56,7 @@ async function main() {
     },
   );
   const activeRepos: Record<string, [number, number, number]> = {};
-  contributors.forEach(([user, repos]) => {
+  contributors.forEach(([, repos]) => {
     const weeklyStats = Object.entries(repos.weekly_stats);
     weeklyStats.forEach(([repo, stats]) => {
       if (!activeRepos[repo]) {
@@ -75,12 +76,27 @@ async function main() {
   );
 
   if (process.env.NODE_ENV !== "production") {
-    console.log(
-      util.inspect(Object.fromEntries(contributors), {
-        depth: 5,
-        colors: true,
-      }),
-    );
+    const topContributors = contributors.slice(0, 5);
+    for (const [login, { weekly_stats }] of topContributors) {
+      const details = stats.contributors[login];
+      try {
+        const avatar = await createTerminalImage(details.avatar_url, {
+          height: "20%",
+          width: "50%",
+          preserveAspectRatio: false,
+        });
+        console.log(avatar);
+      } catch (e) {}
+      console.log(`Contributor: ${login} (${details.total} Total)\n`);
+      for (const [repo, stats] of Object.entries(weekly_stats)) {
+        console.log(
+          `\tRepository: ${repo}\n`,
+          `\t Total commits: ${stats[0]}\n`,
+          `\t Total additions: ${stats[1]}\n`,
+          `\t Total deletions: ${stats[2]}\n`,
+        );
+      }
+    }
   }
 
   for (const repo in sortedActiveRepos) {
