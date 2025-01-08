@@ -19,6 +19,14 @@ const createTerminalImage = async (
   return terminalImage.buffer(Buffer.from(imageBuffer), opts);
 };
 
+const emap = {
+  1: "🥇",
+  2: "🥈",
+  3: "🥉",
+  4: "4️⃣",
+  5: "5️⃣",
+};
+
 async function main() {
   spinner.start("Fetching stats...");
   const stats = await getStats();
@@ -62,7 +70,9 @@ async function main() {
       return totalCommitDiff + 0.01 * totalChangeDiff;
     },
   );
+
   const activeRepos: Record<string, [number, number, number]> = {};
+
   contributors.forEach(([, repos]) => {
     const weeklyStats = Object.entries(repos.weekly_stats);
     weeklyStats.forEach(([repo, stats]) => {
@@ -83,6 +93,8 @@ async function main() {
 
   const topContributors = contributors.slice(0, 5);
 
+  spinner.succeed("Stats fetched successfully");
+
   if (process.env.NODE_ENV !== "production") {
     console.log(`Top 5 Contributors\n`);
 
@@ -97,9 +109,8 @@ async function main() {
         });
         console.log(avatar);
       } catch (e) {}
-      console.log(
-        `(${topContributors.indexOf(c) + 1}) Contributor: ${login} (${details.total} Total)\n`,
-      );
+      const e = emap[(topContributors.indexOf(c) + 1) as keyof typeof emap];
+      console.log(`(${e} ${login} (${details.total} Total)\n`);
       for (const [repo, stats] of Object.entries(weekly_stats)) {
         console.log(
           `\tRepository: ${repo}\n`,
@@ -117,16 +128,15 @@ async function main() {
       const [repo, [commits, adds, deletes]] = r;
       const details = stats.repos.find((r) => r.name === repo);
       if (!details) continue;
+      const e = emap[(sortedActiveRepos.indexOf(r) + 1) as keyof typeof emap];
       console.log(
-        `(${sortedActiveRepos.indexOf(r) + 1}) Repository: ${details.name} (${details.description})\n`,
+        `(${e} ${details.name} (${details.description})\n`,
         `Total commits: ${commits}\n`,
         `Total additions: ${adds}\n`,
         `Total deletions: ${deletes}\n`,
       );
     }
   }
-
-  spinner.succeed("Stats fetched successfully");
 }
 
 main()

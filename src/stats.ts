@@ -31,7 +31,6 @@ export const getStats = async () => {
     throw new Error("ORG_NAME is not defined");
   }
 
-  spinner.prefixText = "GitHub API";
   spinner.text = "Fetching organization data...";
 
   const [
