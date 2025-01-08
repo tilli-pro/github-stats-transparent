@@ -39,20 +39,26 @@ async function main() {
         Object.entries(_reposA),
         Object.entries(_reposB),
       ];
-      const commitAggregateA = reposA.reduce(
-        (acc, [, stats]) => [stats[0] + acc[0], stats[1] - stats[2] + acc[1]],
+      const [totalCommitsA, totalChangesA] = reposA.reduce(
+        ([totalCommits, totalChanges], [, [commits, adds, deletes]]) => [
+          commits + totalCommits,
+          adds - deletes + totalChanges,
+        ],
         [0, 0],
       );
-      const commitAggregateB = reposB.reduce(
-        (acc, [, stats]) => [stats[0] + acc[0], stats[1] - stats[2] + acc[1]],
+      const [totalCommitsB, totalChangesB] = reposB.reduce(
+        ([totalCommits, totalChanges], [, [commits, adds, deletes]]) => [
+          commits + totalCommits,
+          adds - deletes + totalChanges,
+        ],
         [0, 0],
       );
 
-      const [commitStatDiff, commitAddDiff] = [
-        commitAggregateB[0] - commitAggregateA[0],
-        commitAggregateB[1] - commitAggregateA[1],
-      ];
-      return commitStatDiff * 0.4 + commitAddDiff * 0.6;
+      const totalCommitDiff = totalCommitsB - totalCommitsA;
+      const totalChangeDiff = totalChangesB - totalChangesA;
+
+      // we need to weight changes (i.e. literal commit diff character-wise) significantly less than total commits (i.e. the number of commits)
+      return totalCommitDiff + 0.01 * totalChangeDiff;
     },
   );
   const activeRepos: Record<string, [number, number, number]> = {};
@@ -67,17 +73,20 @@ async function main() {
       activeRepos[repo][2] += stats[2];
     });
   });
-  const sortedActiveRepos = Object.fromEntries(
-    Object.entries(activeRepos)
-      .sort(([, [totalA]], [, [totalB]]) => {
-        return totalB - totalA;
-      })
-      .slice(0, 4),
-  );
+
+  const sortedActiveRepos = Object.entries(activeRepos)
+    .sort(([, [totalA]], [, [totalB]]) => {
+      return totalB - totalA;
+    })
+    .slice(0, 5);
+
+  const topContributors = contributors.slice(0, 5);
 
   if (process.env.NODE_ENV !== "production") {
-    const topContributors = contributors.slice(0, 5);
-    for (const [login, { weekly_stats }] of topContributors) {
+    console.log(`Top 5 Contributors\n`);
+
+    for (const c of topContributors) {
+      const [login, { weekly_stats }] = c;
       const details = stats.contributors[login];
       try {
         const avatar = await createTerminalImage(details.avatar_url, {
@@ -87,7 +96,9 @@ async function main() {
         });
         console.log(avatar);
       } catch (e) {}
-      console.log(`Contributor: ${login} (${details.total} Total)\n`);
+      console.log(
+        `(${topContributors.indexOf(c) + 1}) Contributor: ${login} (${details.total} Total)\n`,
+      );
       for (const [repo, stats] of Object.entries(weekly_stats)) {
         console.log(
           `\tRepository: ${repo}\n`,
@@ -99,15 +110,17 @@ async function main() {
     }
   }
 
-  for (const repo in sortedActiveRepos) {
-    const details = stats.repos.find((r) => r.name === repo);
-    if (!details) continue;
-    if (process.env.NODE_ENV !== "production") {
+  if (process.env.NODE_ENV !== "production") {
+    console.log(`Top 5 Active Repositories\n`);
+    for (const r of sortedActiveRepos) {
+      const [repo, [commits, adds, deletes]] = r;
+      const details = stats.repos.find((r) => r.name === repo);
+      if (!details) continue;
       console.log(
-        `Repository: ${details.name} (${details.description})\n`,
-        `Total commits: ${sortedActiveRepos[repo][0]}\n`,
-        `Total additions: ${sortedActiveRepos[repo][1]}\n`,
-        `Total deletions: ${sortedActiveRepos[repo][2]}\n`,
+        `(${sortedActiveRepos.indexOf(r) + 1}) Repository: ${details.name} (${details.description})\n`,
+        `Total commits: ${commits}\n`,
+        `Total additions: ${adds}\n`,
+        `Total deletions: ${deletes}\n`,
       );
     }
   }
