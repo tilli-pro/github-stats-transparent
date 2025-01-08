@@ -43,7 +43,7 @@ async function main() {
 
   const contributors = Object.entries(stats.contributors);
   contributors.sort(
-    ([, { weekly_stats: _reposA }], [, { weekly_stats: _reposB }]) => {
+    ([a, { weekly_stats: _reposA }], [b, { weekly_stats: _reposB }]) => {
       const [reposA, reposB] = [
         Object.entries(_reposA),
         Object.entries(_reposB),
@@ -55,6 +55,7 @@ async function main() {
         ],
         [0, 0],
       );
+
       const [totalCommitsB, totalChangesB] = reposB.reduce(
         ([totalCommits, totalChanges], [, [commits, adds, deletes]]) => [
           commits + totalCommits,
@@ -63,11 +64,17 @@ async function main() {
         [0, 0],
       );
 
-      const totalCommitDiff = totalCommitsB - totalCommitsA;
-      const totalChangeDiff = totalChangesB - totalChangesA;
-
       // we need to weight changes (i.e. literal commit diff character-wise) significantly less than total commits (i.e. the number of commits)
-      return totalCommitDiff + 0.01 * totalChangeDiff;
+      // however plethora of commits should also not be overweighted, so we do some "fun math" to get a reasonable commit score
+      const scoreCommits = (commits: number) =>
+        20 * Math.log(commits) - 5 * Math.sqrt(commits);
+      const contributionsA = scoreCommits(totalCommitsA) + 0.01 * totalChangesA;
+      stats.contributors[a].score = contributionsA;
+      const contributionsB = scoreCommits(totalCommitsB) + 0.01 * totalChangesB;
+      stats.contributors[b].score = contributionsB;
+      const contributionDiff = contributionsB - contributionsA;
+
+      return contributionDiff;
     },
   );
 
@@ -110,7 +117,8 @@ async function main() {
         console.log(avatar);
       } catch (e) {}
       const e = emap[(topContributors.indexOf(c) + 1) as keyof typeof emap];
-      console.log(`(${e} ${login} (${details.total} Total)\n`);
+      console.log(`${e}  ${login} (${details.total} All Time)\n`);
+      console.log(` Total Contribution Score: ${details.score?.toFixed(2)}\n`);
       for (const [repo, stats] of Object.entries(weekly_stats)) {
         console.log(
           `\tRepository: ${repo}\n`,
@@ -130,7 +138,7 @@ async function main() {
       if (!details) continue;
       const e = emap[(sortedActiveRepos.indexOf(r) + 1) as keyof typeof emap];
       console.log(
-        `(${e} ${details.name} (${details.description})\n`,
+        `${e}  ${details.name} (${details.description?.trim()})\n`,
         `Total commits: ${commits}\n`,
         `Total additions: ${adds}\n`,
         `Total deletions: ${deletes}\n`,

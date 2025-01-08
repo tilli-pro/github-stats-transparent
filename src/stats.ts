@@ -70,6 +70,7 @@ export const getStats = async () => {
     {
       total: number;
       weekly_stats: Record<string, [number, number, number]>;
+      score?: number;
     } & Awaited<ReturnType<typeof octokit.orgs.listMembers>>["data"][number]
   > = {};
 
@@ -100,6 +101,7 @@ export const getStats = async () => {
         console.error(`Failed to fetch languages for ${repo.name}`);
         console.error(langResult.reason);
       }
+
       const userData =
         contributerResult.status === "fulfilled"
           ? contributerResult.value.data
@@ -108,6 +110,7 @@ export const getStats = async () => {
         console.error(`Failed to fetch contributors for ${repo.name}`);
         console.error(contributerResult.reason);
       }
+
       const commitData =
         commitResult.status === "fulfilled" ? commitResult.value.data : null;
       if (commitResult.status === "rejected") {
